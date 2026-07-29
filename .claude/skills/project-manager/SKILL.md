@@ -11,10 +11,10 @@ description: 项目管家 — 自动记录和管理 Claude Code 项目。自动�
 
 | 文件 | 路径 |
 |------|------|
-| JSON 索引 | `D:\claude-projects-manager\projects-data.json` |
-| Web UI | `D:\claude-projects-manager\web-ui\index.html` |
-| 默认项目目录 | `D:\Claude program\` — **所有新项目必须创建在此目录下** |
-| Obsidian 备份 | `C:\Users\qingy\Documents\Obsidian Vault\项目记录\{项目名}.md` |
+| JSON 索引 | `{projectManagerDir}\projects-data.json` |
+| Web UI | `{projectManagerDir}\web-ui\index.html` |
+| 默认项目目录 | `{defaultProjectDir}\` — **所有新项目必须创建在此目录下** |
+| Obsidian 备份 | `{obsidianVault}\项目记录\{项目名}.md` |
 
 ## 核心行为准则
 
@@ -22,7 +22,7 @@ description: 项目管家 — 自动记录和管理 Claude Code 项目。自动�
 
 **当用户在对话中开始一个新项目时，你必须在项目开始时自动创建一条 `in-progress` 记录到 `projects-data.json`。**
 
-**⚠️ 重要：所有新项目的目录必须创建在 `D:\Claude program\` 下！** 例如 `D:\Claude program\项目名称`。如果用户没有指定路径，主动建议使用此目录。
+**⚠️ 重要：所有新项目的目录必须创建在 `{defaultProjectDir}\` 下！** 例如 `{defaultProjectDir}\项目名称`。如果用户没有指定路径，主动建议使用此目录。
 
 判断标准（满足任一即可判定为"新项目"）：
 - 用户说「帮我做一个XX」「帮我写一个XX系统」「咱们来开发XX」
@@ -82,13 +82,13 @@ a) **更新 `projects-data.json`**：
    - 更新 `metadata.lastUpdated` 和 `metadata.totalProjects`
 
 b) **同步 HTML 嵌入数据**：
-   - 读取 `D:\claude-projects-manager\web-ui\index.html`
+   - 读取 `{projectManagerDir}\web-ui\index.html`
    - 找到 `<script id="embedded-data" type="application/json">` 标签
    - 将其内容替换为最新的完整 JSON（单行压缩格式，转义反斜杠 `\\`）
    - 这确保用户双击 HTML 文件（file:// 协议）时也能看到最新数据
 
 c) **生成 Obsidian 备份**：
-   在 `C:\Users\qingy\Documents\Obsidian Vault\项目记录\{项目名}.md` 创建文件，格式：
+   在 `{obsidianVault}\项目记录\{项目名}.md` 创建文件，格式：
 
 ```markdown
 ---
@@ -163,14 +163,14 @@ location: D:\path\to\project
 
 如果用户说面板上没有显示某个项目（说明自动检测遗漏了），你可以：
 
-1. **调用 `/api/scan` 端点**扫描 `D:\Claude program\` 下未被记录的项目目录
-2. **手动扫描**：用 `ls "D:\Claude program\"` 列出所有目录，对比 `projects-data.json` 中的 `location` 字段
+1. **调用 `/api/scan` 端点**扫描 `{defaultProjectDir}\` 下未被记录的项目目录
+2. **手动扫描**：用 `ls "{defaultProjectDir}\"` 列出所有目录，对比 `projects-data.json` 中的 `location` 字段
 3. 发现遗漏项目后，立即补录到 JSON 并同步 HTML
 
 ### 6. 静默自动检查
 
 - 每次对话开始时，快速扫一眼 `projects-data.json` 确认数据完好
-- 检查 `D:\Claude program\` 下是否有新目录未被记录（主动扫描）
+- 检查 `{defaultProjectDir}\` 下是否有新目录未被记录（主动扫描）
 - 如果发现有 `in-progress` 超过 30 天未更新的项目，下次和用户对话时顺带问一句是否要归档
 - 不要频繁主动打扰用户，只在合适时机提一句
 
@@ -189,7 +189,7 @@ location: D:\path\to\project
 用户: 帮我写一个 Flask 博客系统
 
 你的行动:
-1. 创建目录 D:\Claude program\flask-blog 的同时，读取 D:\claude-projects-manager\projects-data.json
+1. 创建目录 {defaultProjectDir}\flask-blog 的同时，读取 {projectManagerDir}\projects-data.json
 2. 添加一条新记录：
    {
      "id": "proj-20260729-a3f2",
@@ -219,7 +219,7 @@ location: D:\path\to\project
 2. 更新 status → "completed", updatedAt → 今天
 3. 填充 highlights: ["实现了用户认证系统", "响应式前端设计", "Markdown 编辑器集成"]
 4. 写回 JSON
-5. 创建 Obsidian 备份: C:\Users\qingy\Documents\Obsidian Vault\项目记录\Flask 博客系统.md
+5. 创建 Obsidian 备份: {obsidianVault}\项目记录\Flask 博客系统.md
 6. 告知用户: "✅ 项目已归档。JSON 索引和 Obsidian 备份均已更新。"
 ```
 

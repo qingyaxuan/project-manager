@@ -19,9 +19,33 @@ BUNDLE_DIR = Path(__file__).parent
 STATIC_DIR = BUNDLE_DIR
 DATA_FILE = BUNDLE_DIR / "projects-data.json"
 INDEX_HTML = STATIC_DIR / "web-ui" / "index.html"
-PORT = 8765
-CLAUDE_CMD = r"C:\Users\qingy\AppData\Roaming\npm\claude.cmd"
-DEFAULT_PROJECT_DIR = r"D:\Claude program"
+CONFIG_FILE = BUNDLE_DIR / "config.json"
+
+# ── Load configuration ─────────────────────────────────────────────
+def _load_config():
+    """Load config.json with sensible defaults. Generate if missing."""
+    defaults = {
+        "port": 8765,
+        "defaultProjectDir": str(Path.home() / "Claude Projects"),
+        "claudeCmd": "",
+        "obsidianVault": "",
+        "projectManagerDir": str(BUNDLE_DIR),
+    }
+    if CONFIG_FILE.exists():
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                loaded = json.load(f)
+            defaults.update(loaded)
+        except Exception:
+            pass
+    return defaults
+
+_config = _load_config()
+PORT = _config["port"]
+DEFAULT_PROJECT_DIR = _config["defaultProjectDir"]
+CLAUDE_CMD = _config["claudeCmd"]
+
+_first_run = not CONFIG_FILE.exists()
 
 # ── Ensure data file exists on first run ──
 if not DATA_FILE.exists():
@@ -105,6 +129,8 @@ class ProjectServer(http.server.SimpleHTTPRequestHandler):
 
         if path == "/api/projects":
             self._api_list()
+        elif path == "/api/config":
+            self._api_config()
         elif path == "/api/scan":
             self._api_scan()
         elif path == "/api/open":
@@ -152,6 +178,16 @@ class ProjectServer(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(body)
         except Exception as exc:
             self._error(str(exc))
+
+    def _api_config(self):
+        """Return the current configuration (safe for clients)."""
+        self._ok({
+            "defaultProjectDir": DEFAULT_PROJECT_DIR,
+            "projectManagerDir": _config.get("projectManagerDir", str(BUNDLE_DIR)),
+            "port": PORT,
+            "hasClaudeCmd": bool(CLAUDE_CMD),
+            "hasObsidian": bool(_config.get("obsidianVault", "")),
+        })
 
     def _api_open(self, params):
         """Open a project folder in File Explorer."""
@@ -379,6 +415,18 @@ if __name__ == "__main__":
     print(f"  Web UI: http://localhost:{PORT}/web-ui/index.html")
     print(f"  Data:   {DATA_FILE}")
     print(f"  Watch:  {DEFAULT_PROJECT_DIR}")
+
+    if _first_run:
+        print(f"  ─────────────────────────────────────────────")
+        print(f"  ⚠  First run detected! Run setup first:")
+        print(f"     python setup.py")
+        print(f"  Or create config.json manually (see README).")
+        print(f"  ─────────────────────────────────────────────")
+
+    if not CLAUDE_CMD:
+        print(f"  ⚠  Claude CLI not configured. 'Continue' button may not work.")
+        print(f"     Run: python setup.py")
+
     print(f"  Press Ctrl+C to stop.\n")
 
     try:

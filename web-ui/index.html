@@ -474,6 +474,7 @@ body::before{
 const API_BASE = window.location.origin;
 const DATA_URL = API_BASE + '/api/projects';
 let projects = [];
+let defaultProjectDir = 'D:\\\\Claude program\\\\';  // fallback, updated by fetchConfig()
 let metadata = {};
 let activeFilter = 'all';
 let activeView = 'grid';
@@ -506,6 +507,18 @@ async function loadData() {
       console.warn('Embedded data parse failed:', e.message);
     }
   }
+}
+
+async function fetchConfig() {
+  try {
+    const resp = await fetch(API_BASE + '/api/config');
+    if (resp.ok) {
+      const cfg = await resp.json();
+      if (cfg.defaultProjectDir) {
+        defaultProjectDir = cfg.defaultProjectDir.replace(/\\/g, '\\\\') + '\\\\';
+      }
+    }
+  } catch(e) { /* offline — use fallback */ }
 }
 
 window.retryLoad = async function() {
@@ -827,7 +840,7 @@ function buildFormHTML(existing) {
       </div>
       <div class="form-group">
         <label>存放路径</label>
-        <input type="text" id="formLocation" value="${escAttr(isEdit ? (existing.location||'') : 'D:\\\\Claude program\\\\')}" placeholder="D:\\Claude program\\项目名">
+        <input type="text" id="formLocation" value="${escAttr(isEdit ? (existing.location||'') : defaultProjectDir)}" placeholder="项目存放路径">
         <div class="hint">所有项目统一存放在 D:\\Claude program\\ 下</div>
       </div>
       <div class="form-row">
@@ -989,6 +1002,7 @@ document.querySelectorAll('.view-btn').forEach(b => b.addEventListener('click', 
 
 // ========== Init ==========
 // Load embedded data immediately, then try live API
+fetchConfig();
 loadData().then(() => {
   renderAll();
   updateLastUpdated();

@@ -25,12 +25,16 @@ for /f "tokens=5" %%a in ('netstat -ano 2^>nul ^| findstr ":8765" ^| findstr "LI
 if !FOUND! equ 0 echo        No running server found.
 echo.
 
-:: ---- [2/2] Project data and program files ----
+:: ---- Read project dir from config.json ----
+set "PROJECT_DIR="
+for /f "delims=" %%a in ('python -c "import json; c=json.load(open(r'%~dp0config.json', encoding='utf-8')); print(c.get('defaultProjectDir','D:\\Claude program'))" 2^>nul') do set "PROJECT_DIR=%%a"
+if not defined PROJECT_DIR set "PROJECT_DIR=D:\Claude program"
+
 echo [2/2] Clean up files?
 echo.
 echo     Program directory: %~dp0
 echo     Project data:      projects-data.json
-echo     Your projects:     D:\Claude program\
+echo     Your projects:     !PROJECT_DIR!\
 echo.
 set /p "DEL_ALL=     Delete ALL program files AND project data? [y/N]: "
 
@@ -39,14 +43,15 @@ if /i "!DEL_ALL!"=="y" (
     echo     *** FINAL WARNING ***
     echo     This will permanently delete everything in:
     echo       %~dp0
-    echo       D:\Claude program\
+    echo       !PROJECT_DIR!\
     set /p "CONFIRM=     Type YES to confirm: "
     if "!CONFIRM!"=="YES" (
         echo.
         echo     Deleting program files...
-        cd /d "D:\"
+        cd /d "%~dp0"
+        cd ..
         rmdir /s /q "%~dp0" 2>nul
-        rmdir /s /q "D:\Claude program" 2>nul
+        if exist "!PROJECT_DIR!" rmdir /s /q "!PROJECT_DIR!" 2>nul
         if not exist "%~dp0" (
             echo     All files removed.
             echo.

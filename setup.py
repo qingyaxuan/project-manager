@@ -240,6 +240,16 @@ def update_skill_md(claude_cmd, project_dir, obsidian_vault):
     skill_path.write_text(content, encoding="utf-8")
     print(f"  {CHECK} SKILL.md updated")
 
+    # Protect personalized SKILL.md from accidental git commit
+    try:
+        subprocess.run(
+            ["git", "update-index", "--skip-worktree", str(skill_path)],
+            cwd=str(PROJECT_DIR), capture_output=True, timeout=5
+        )
+        print(f"  {CHECK} SKILL.md protected from accidental git commit")
+    except Exception:
+        pass  # Not in a git repo — no problem
+
 
 def test_server():
     """Try starting the server briefly to verify everything works."""

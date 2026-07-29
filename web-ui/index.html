@@ -51,25 +51,6 @@ body::before{
 /* ========== Layout ========== */
 .container{max-width:1240px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
 
-/* ========== Error Banner ========== */
-.error-banner{
-  display:none;
-  background:rgba(245,80,110,0.12);
-  border:1px solid rgba(245,80,110,0.3);
-  border-radius:var(--radius);
-  padding:14px 20px;
-  margin-top:16px;
-  color:var(--danger);
-  font-size:0.88rem;
-  align-items:center;gap:10px;
-}
-.error-banner.show{display:flex;}
-.error-banner code{
-  background:rgba(0,0,0,0.3);padding:3px 8px;border-radius:4px;
-  font-size:0.82rem;color:var(--text-primary);
-}
-.error-banner .btn-sm{padding:4px 12px;margin-left:auto;white-space:nowrap;}
-
 /* ========== Header ========== */
 .header{
   background:rgba(17,17,34,0.85);
@@ -115,6 +96,80 @@ body::before{
   transform:translateY(-50%);color:var(--text-muted);
   pointer-events:none;font-size:1rem;
 }
+
+/* ========== Header Buttons ========== */
+.btn-add{
+  padding:8px 16px;border-radius:20px;
+  border:1px solid var(--accent-2);background:rgba(46,216,163,0.1);
+  color:var(--accent-2);font-size:0.84rem;cursor:pointer;
+  transition:var(--transition);white-space:nowrap;font-weight:500;
+}
+.btn-add:hover{background:var(--accent-2);color:#000}
+.btn-refresh{
+  width:34px;height:34px;border-radius:50%;
+  border:1px solid var(--border);background:var(--bg-card);
+  color:var(--text-secondary);font-size:0.9rem;cursor:pointer;
+  transition:var(--transition);display:flex;align-items:center;justify-content:center;
+  padding:0;line-height:1;
+}
+.btn-refresh:hover{border-color:var(--accent);color:var(--accent)}
+.btn-refresh.spinning{animation:spin 0.6s ease-in-out}
+@keyframes spin{to{transform:rotate(360deg)}}
+.last-updated{
+  font-size:0.72rem;color:var(--text-muted);white-space:nowrap;
+}
+
+/* ========== Form Modal ========== */
+.form-group{margin-bottom:14px}
+.form-group label{
+  display:block;font-size:0.78rem;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;
+}
+.form-group input, .form-group textarea, .form-group select{
+  width:100%;padding:9px 12px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg-card);
+  color:var(--text-primary);font-size:0.9rem;outline:none;
+  transition:var(--transition);font-family:inherit;
+}
+.form-group textarea{resize:vertical;min-height:70px}
+.form-group input:focus, .form-group textarea:focus, .form-group select:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow);
+}
+.form-group .hint{font-size:0.72rem;color:var(--text-muted);margin-top:3px}
+.form-row{display:flex;gap:10px}
+.form-row .form-group{flex:1}
+.tag-input-wrap{display:flex;flex-wrap:wrap;gap:4px;padding:4px;min-height:34px;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--bg-card);cursor:text;align-items:center;
+}
+.tag-input-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-glow)}
+.tag-input-wrap .tag-item{
+  display:flex;align-items:center;gap:3px;
+  padding:2px 8px;border-radius:10px;font-size:0.76rem;
+  background:rgba(114,88,245,0.15);color:#b19ef7;
+}
+.tag-input-wrap .tag-item .tag-remove{
+  cursor:pointer;font-size:0.9rem;line-height:1;color:var(--text-muted);
+}
+.tag-input-wrap .tag-item .tag-remove:hover{color:var(--danger)}
+.tag-input-wrap input{border:none!important;background:transparent!important;
+  color:var(--text-primary)!important;font-size:0.84rem!important;
+  outline:none!important;flex:1;min-width:80px;padding:2px 4px!important;
+  box-shadow:none!important;
+}
+
+/* ========== Card Edit/Delete Actions ========== */
+.card-edit-btn, .card-del-btn{
+  padding:3px 10px;border-radius:10px;border:none;
+  font-size:0.7rem;cursor:pointer;transition:var(--transition);
+  opacity:0;background:transparent;
+}
+.project-card:hover .card-edit-btn,
+.project-card:hover .card-del-btn{opacity:1}
+.card-edit-btn{color:var(--accent-4)}
+.card-edit-btn:hover{background:rgba(77,166,255,0.1)}
+.card-del-btn{color:var(--danger)}
+.card-del-btn:hover{background:rgba(245,80,110,0.1)}
 
 /* ========== Stats Bar ========== */
 .stats-bar{display:flex;gap:14px;padding:22px 0;flex-wrap:wrap}
@@ -362,7 +417,10 @@ body::before{
       <div class="logo-icon">📂</div>
       <span>项目检索面板</span>
     </div>
-    <div class="search-wrap">
+    <button class="btn-add" onclick="showCreateForm()" title="手动添加项目">＋ 新增</button>
+        <button class="btn-refresh" onclick="refreshData()" title="刷新数据" id="btnRefresh">🔄</button>
+        <span class="last-updated" id="lastUpdated"></span>
+        <div class="search-wrap">
       <span class="search-icon">🔍</span>
       <input type="text" id="searchInput" placeholder="搜索项目名称、描述、技术栈…" autocomplete="off">
     </div>
@@ -370,21 +428,6 @@ body::before{
 </header>
 
 <main class="container">
-  <!-- Error Banner -->
-  <div class="error-banner" id="errorBanner">
-    <span>⚠️</span>
-    <span>数据加载失败。请使用本地服务器打开：</span>
-    <code>python -m http.server 8765</code>
-    <span>然后访问</span>
-    <code>http://localhost:8765/web-ui/</code>
-    <button class="btn-sm chip" onclick="retryLoad()" style="color:var(--danger);border-color:var(--danger);cursor:pointer;">重试</button>
-  </div>
-
-  <!-- Stale Data Banner (file:// mode) -->
-  <div id="staleBanner" style="display:none;background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.25);border-radius:var(--radius);padding:10px 18px;margin-top:12px;font-size:0.82rem;color:var(--accent-3);text-align:center;">
-    💡 当前为离线快照数据。双击 <code style="background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:4px;">launch.bat</code> 启动本地服务器获取实时数据。
-  </div>
-
   <!-- Stats -->
   <div class="stats-bar" id="statsBar"></div>
 
@@ -415,13 +458,16 @@ body::before{
   <div class="modal" id="modalContent"></div>
 </div>
 
+<!-- ========== Create/Edit Form Modal ========== -->
+<div class="modal-overlay" id="formModalOverlay">
+  <div class="modal" id="formModalContent"></div>
+</div>
+
 <!-- ========== Toast ========== -->
 <div class="toast" id="toast"></div>
 
 <!-- ========== Embedded Data Fallback (for file:// access) ========== -->
-<script id="embedded-data" type="application/json">
-{"projects":[{"id":"proj-20260729-b7e2","name":"项目检索管理系统","description":"Claude Code 项目管家，自动追踪记录所有合作项目，支持关键词搜索、时间线浏览、Web 可视化面板和 Obsidian 备份同步","techStack":["HTML","CSS","JavaScript","JSON","Claude Code Skill","Obsidian"],"tags":["tool","project-management","search","automation"],"category":"tool","createdAt":"2026-07-29","updatedAt":"2026-07-29","status":"completed","location":"D:\\\\claude-projects-manager","highlights":["自动检测并实时记录新项目，用户零操作","关键词全文搜索 + 年份时间线双模式检索","精美暗色主题 Web 界面，支持卡片/时间线视图切换","项目完成自动生成 Obsidian YAML frontmatter 备份","无缝集成 Claude Code Skill，自然语言触发"]}],"metadata":{"lastUpdated":"2026-07-29T12:00:00+08:00","totalProjects":1}}
-</script>
+<script id="embedded-data" type="application/json">{"projects": [{"id": "proj-20260729-b7e2", "name": "项目检索管理系统", "description": "Claude Code 项目管理工具 — HTTP API + Web 面板，本地离线使用", "techStack": ["Python", "JavaScript", "HTML/CSS", "HTTP Server"], "tags": ["项目管家", "工具", "本地部署", "Claude Code"], "category": "tool", "createdAt": "2026-07-29", "updatedAt": "2026-07-29", "status": "in-progress", "location": "D:\\claude-projects-manager", "highlights": ["零依赖 Python HTTP 服务器", "CRUD API 完整实现（GET/POST/PUT/DELETE）", "离线数据快照支持 file:// 访问", "D:\\Claude program 项目自动扫描", "一键卸载程序", "删除记录同步删除项目目录"]}, {"id": "proj-20260729-c4a1", "name": "组会PPT_辐射检测论文汇报", "description": "基于 Scientific Data 论文（s41597-020-00672-2）制作18页组会汇报PPT，白底黑字、中文宋体、英文Times New Roman，最小22pt字号", "techStack": ["Python", "python-pptx", "PyMuPDF", "pandas"], "tags": ["PPT", "学术汇报", "辐射检测", "组会"], "category": "tool", "createdAt": "2026-07-29", "updatedAt": "2026-07-29", "status": "completed", "location": "D:\\Claude program\\PPT制作_城市辐射检测论文", "highlights": ["中英文混排字体分离：中文宋体 + 英文Times New Roman，自动检测字符类型分配字体", "PDF矢量图提取：PyMuPDF 4x整页渲染方案解决矢量图无法直接提取问题", "18页幻灯片工厂模式：统一create_content_slide()封装标题区、装饰线、正文区和页码", "全篇字号≥22pt，白底黑字+深蓝标题配色，16:9宽屏", "脚本化一键生成：修改参数即可重新生成，附带自动验证脚本"]}], "metadata": {"lastUpdated": "2026-07-29T16:33:55+08:00", "totalProjects": 2}}</script>
 
 <script>
 // ========== State ==========
@@ -442,7 +488,6 @@ async function loadData() {
       projects = data.projects || [];
       metadata = data.metadata || {};
       fromNetwork = true;
-      document.getElementById('errorBanner').classList.remove('show');
     }
   } catch (err) {
     console.warn('API fetch failed:', err.message);
@@ -456,12 +501,9 @@ async function loadData() {
         const data = JSON.parse(el.textContent.trim());
         projects = data.projects || [];
         metadata = data.metadata || {};
-        const banner = document.getElementById('staleBanner');
-        if (banner) banner.style.display = 'block';
       }
     } catch (e) {
       console.warn('Embedded data parse failed:', e.message);
-      document.getElementById('errorBanner').classList.add('show');
     }
   }
 }
@@ -620,7 +662,11 @@ function renderGrid() {
     <div class="project-card" onclick="showDetail(${JSON.stringify(p).replace(/"/g,'&quot;')})">
       <div class="card-header">
         <span class="card-title">${esc(p.name)}</span>
-        <span class="card-status status-${p.status}">${statusLabel(p.status)}</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <button class="card-edit-btn" onclick="event.stopPropagation();showEditForm('${escAttr(p.id)}')" title="编辑">✎</button>
+          <button class="card-del-btn" onclick="event.stopPropagation();deleteProject('${escAttr(p.id)}')" title="删除">✕</button>
+          <span class="card-status status-${p.status}">${statusLabel(p.status)}</span>
+        </div>
       </div>
       <div class="card-desc">${esc(p.description || '暂无描述')}</div>
       <div class="card-tags">
@@ -697,6 +743,238 @@ function escAttr(s) { return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").r
 function formatDate(d) { if(!d) return '—'; const dt=new Date(d); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
 function statusLabel(s) { const m={'completed':'已完成','in-progress':'进行中','archived':'已归档'}; return m[s]||s; }
 
+// ========== Data Refresh ==========
+let lastDataHash = '';
+async function refreshData(silent) {
+  const btn = document.getElementById('btnRefresh');
+  if (btn) { btn.classList.add('spinning'); }
+  try {
+    const resp = await fetch(DATA_URL);
+    if (resp.ok) {
+      const data = await resp.json();
+      const hash = JSON.stringify(data);
+      if (hash !== lastDataHash) {
+        lastDataHash = hash;
+        projects = data.projects || [];
+        metadata = data.metadata || {};
+        renderAll();
+        if (!silent) showToast('数据已刷新');
+        updateLastUpdated();
+      } else if (!silent) {
+        showToast('数据已是最新');
+      }
+    }
+  } catch(e) { /* server not running, use embedded */ }
+  if (btn) {
+    btn.classList.remove('spinning');
+    clearTimeout(btn._t); btn._t = setTimeout(() => btn.classList.remove('spinning'), 100);
+  }
+}
+
+function updateLastUpdated() {
+  const el = document.getElementById('lastUpdated');
+  if (!el) return;
+  if (metadata.lastUpdated) {
+    const d = new Date(metadata.lastUpdated);
+    const ts = `${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}:${d.getSeconds().toString().padStart(2,'0')}`;
+    el.textContent = `更新 ${ts}`;
+  }
+}
+
+// ========== Form Modal ==========
+function showCreateForm() {
+  const overlay = document.getElementById('formModalOverlay');
+  document.getElementById('formModalContent').innerHTML = buildFormHTML();
+  overlay.classList.add('show');
+  overlay.onclick = function(e) { if (e.target === overlay) closeFormModal(); };
+  // Init tag inputs
+  initTagInputs();
+}
+
+function showEditForm(projId) {
+  const p = projects.find(x => x.id === projId);
+  if (!p) { showToast('项目未找到'); return; }
+  const overlay = document.getElementById('formModalOverlay');
+  document.getElementById('formModalContent').innerHTML = buildFormHTML(p);
+  overlay.classList.add('show');
+  overlay.onclick = function(e) { if (e.target === overlay) closeFormModal(); };
+  initTagInputs();
+}
+
+function closeFormModal() {
+  document.getElementById('formModalOverlay').classList.remove('show');
+}
+
+function buildFormHTML(existing) {
+  const isEdit = !!existing;
+  const title = isEdit ? '编辑项目' : '新增项目';
+  const btnLabel = isEdit ? '保存修改' : '创建项目';
+  const idField = isEdit ? `<input type="hidden" id="formProjId" value="${escAttr(existing.id)}">` : '';
+  return `
+    <div style="display:flex;align-items:start;justify-content:space-between;">
+      <h2>${title}</h2>
+      <button class="modal-close" onclick="closeFormModal()">&times;</button>
+    </div>
+    <form onsubmit="submitProject(event)" style="margin-top:16px;">
+      ${idField}
+      <div class="form-group">
+        <label>项目名称 *</label>
+        <input type="text" id="formName" value="${escAttr(isEdit ? existing.name : '')}" placeholder="例如：Flask 博客系统" required>
+      </div>
+      <div class="form-group">
+        <label>描述</label>
+        <textarea id="formDesc" placeholder="一句话描述项目是做什么的">${esc(isEdit ? (existing.description||'') : '')}</textarea>
+      </div>
+      <div class="form-group">
+        <label>存放路径</label>
+        <input type="text" id="formLocation" value="${escAttr(isEdit ? (existing.location||'') : 'D:\\\\Claude program\\\\')}" placeholder="D:\\Claude program\\项目名">
+        <div class="hint">所有项目统一存放在 D:\\Claude program\\ 下</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>状态</label>
+          <select id="formStatus">
+            <option value="in-progress" ${isEdit && existing.status==='in-progress'?'selected':''}>进行中</option>
+            <option value="completed" ${isEdit && existing.status==='completed'?'selected':''}>已完成</option>
+            <option value="archived" ${isEdit && existing.status==='archived'?'selected':''}>已归档</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>分类</label>
+          <select id="formCategory">
+            ${['fullstack','frontend','backend','tool','cli','other'].map(c =>
+              `<option value="${c}" ${isEdit && existing.category===c?'selected':''}>${c}</option>`
+            ).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>技术栈（逗号分隔）</label>
+        <div class="tag-input-wrap" data-target="formTechStack" data-init='${isEdit ? JSON.stringify(existing.techStack||[]) : '[]'}'>
+          <input type="text" placeholder="输入后回车添加" onkeydown="tagInputKeydown(event, this)">
+        </div>
+        <div class="hint">例如：Python, React, Flask</div>
+      </div>
+      <div class="form-group">
+        <label>标签（逗号分隔）</label>
+        <div class="tag-input-wrap" data-target="formTags" data-init='${isEdit ? JSON.stringify(existing.tags||[]) : '[]'}'>
+          <input type="text" placeholder="输入后回车添加" onkeydown="tagInputKeydown(event, this)">
+        </div>
+        <div class="hint">例如：web, blog, api</div>
+      </div>
+      <div class="modal-actions" style="margin-top:20px;">
+        <button type="submit" class="btn-primary">${btnLabel}</button>
+        <button type="button" onclick="closeFormModal()">取消</button>
+      </div>
+    </form>
+  `;
+}
+
+// ── Tag Input Helpers ──
+function initTagInputs() {
+  document.querySelectorAll('.tag-input-wrap').forEach(wrap => {
+    try {
+      const items = JSON.parse(wrap.dataset.init || '[]');
+      const target = wrap.dataset.target;
+      items.forEach(t => addTagChip(wrap, target, t));
+    } catch(e) { /* ignore parse errors */ }
+  });
+}
+function tagInputKeydown(e, input) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const val = input.value.trim().replace(/,/g, '');
+    if (val) {
+      const wrap = input.closest('.tag-input-wrap');
+      const target = wrap.dataset.target;
+      addTagChip(wrap, target, val);
+      input.value = '';
+    }
+  }
+  if (e.key === 'Backspace' && input.value === '') {
+    const wrap = input.closest('.tag-input-wrap');
+    const chips = wrap.querySelectorAll('.tag-item');
+    if (chips.length > 0) chips[chips.length - 1].remove();
+  }
+}
+function addTagChip(wrap, target, text) {
+  const chip = document.createElement('span');
+  chip.className = 'tag-item';
+  chip.innerHTML = `${esc(text)}<span class="tag-remove" onclick="this.parentElement.remove()">&times;</span>`;
+  wrap.insertBefore(chip, wrap.querySelector('input'));
+}
+function getTagValues(wrap) {
+  return Array.from(wrap.querySelectorAll('.tag-item')).map(c => c.textContent.replace('×','').trim());
+}
+
+// ── Submit ──
+async function submitProject(e) {
+  e.preventDefault();
+  const projId = document.getElementById('formProjId');
+  const isEdit = !!projId;
+
+  const payload = {
+    name: document.getElementById('formName').value.trim(),
+    description: document.getElementById('formDesc').value.trim(),
+    location: document.getElementById('formLocation').value.trim(),
+    status: document.getElementById('formStatus').value,
+    category: document.getElementById('formCategory').value,
+    techStack: getTagValues(document.querySelector('[data-target="formTechStack"]')),
+    tags: getTagValues(document.querySelector('[data-target="formTags"]')),
+  };
+
+  if (!payload.name) { showToast('请输入项目名称'); return; }
+
+  const url = isEdit ? API_BASE + '/api/projects/' + projId.value : API_BASE + '/api/projects';
+  const method = isEdit ? 'PUT' : 'POST';
+
+  try {
+    const resp = await fetch(url, {
+      method,
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if (resp.ok) {
+      closeFormModal();
+      showToast(isEdit ? '项目已更新' : '项目已创建');
+      refreshData(true);
+    } else {
+      const err = await resp.json();
+      showToast('操作失败: ' + (err.error || resp.status));
+    }
+  } catch(ex) {
+    // Fallback: server not running, can't create
+    showToast('服务器未运行，无法操作。请启动 server.py');
+  }
+}
+
+// ── Delete ──
+async function deleteProject(projId) {
+  const p = projects.find(x => x.id === projId);
+  if (!p) return;
+  let msg = `确定要删除项目「${p.name}」吗？\n此操作不可撤销。`;
+  if (p.location) {
+    msg += `\n\n同时将删除项目目录:\n${p.location}`;
+  }
+  if (!confirm(msg)) return;
+
+  try {
+    const resp = await fetch(API_BASE + '/api/projects/' + projId, { method: 'DELETE' });
+    if (resp.ok) {
+      const data = await resp.json();
+      showToast(data.deletedDir
+        ? '项目及目录已删除: ' + p.name
+        : '项目记录已删除（目录保留）: ' + p.name);
+      refreshData(true);
+    } else {
+      const err = await resp.json();
+      showToast('删除失败: ' + (err.error || resp.status));
+    }
+  } catch(ex) {
+    showToast('服务器未运行，无法删除');
+  }
+}
+
 // ========== Events ==========
 document.getElementById('searchInput').addEventListener('input', renderAll);
 document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', function() {
@@ -710,7 +988,13 @@ document.querySelectorAll('.view-btn').forEach(b => b.addEventListener('click', 
 }));
 
 // ========== Init ==========
-loadData().then(renderAll);
+// Load embedded data immediately, then try live API
+loadData().then(() => {
+  renderAll();
+  updateLastUpdated();
+  // Try to fetch live data from server — if reachable, replace embedded snapshot
+  refreshData(true);
+});
 </script>
 </body>
 </html>

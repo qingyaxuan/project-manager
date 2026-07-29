@@ -13,6 +13,7 @@ description: 项目管家 — 自动记录和管理 Claude Code 项目。自动�
 |------|------|
 | JSON 索引 | `D:\claude-projects-manager\projects-data.json` |
 | Web UI | `D:\claude-projects-manager\web-ui\index.html` |
+| 默认项目目录 | `D:\Claude program\` — **所有新项目必须创建在此目录下** |
 | Obsidian 备份 | `C:\Users\qingy\Documents\Obsidian Vault\项目记录\{项目名}.md` |
 
 ## 核心行为准则
@@ -20,6 +21,8 @@ description: 项目管家 — 自动记录和管理 Claude Code 项目。自动�
 ### 1. 自动检测并记录新项目
 
 **当用户在对话中开始一个新项目时，你必须在项目开始时自动创建一条 `in-progress` 记录到 `projects-data.json`。**
+
+**⚠️ 重要：所有新项目的目录必须创建在 `D:\Claude program\` 下！** 例如 `D:\Claude program\项目名称`。如果用户没有指定路径，主动建议使用此目录。
 
 判断标准（满足任一即可判定为"新项目"）：
 - 用户说「帮我做一个XX」「帮我写一个XX系统」「咱们来开发XX」
@@ -156,13 +159,22 @@ location: D:\path\to\project
 - **「更新项目 [名称]」**：
   修改指定项目的字段（状态、描述、亮点等）。
 
-### 5. 静默自动检查
+### 5. 检测遗漏项目（扫描）
+
+如果用户说面板上没有显示某个项目（说明自动检测遗漏了），你可以：
+
+1. **调用 `/api/scan` 端点**扫描 `D:\Claude program\` 下未被记录的项目目录
+2. **手动扫描**：用 `ls "D:\Claude program\"` 列出所有目录，对比 `projects-data.json` 中的 `location` 字段
+3. 发现遗漏项目后，立即补录到 JSON 并同步 HTML
+
+### 6. 静默自动检查
 
 - 每次对话开始时，快速扫一眼 `projects-data.json` 确认数据完好
+- 检查 `D:\Claude program\` 下是否有新目录未被记录（主动扫描）
 - 如果发现有 `in-progress` 超过 30 天未更新的项目，下次和用户对话时顺带问一句是否要归档
 - 不要频繁主动打扰用户，只在合适时机提一句
 
-### 6. 数据一致性
+### 7. 数据一致性
 
 - 每次修改 `projects-data.json` 后，自动更新 `metadata.lastUpdated` 和 `metadata.totalProjects`
 - **每次修改 JSON 后，必须同步更新 `index.html` 中 `<script id="embedded-data">` 标签内的数据**，确保双击 HTML 文件也能看到最新内容
@@ -174,10 +186,10 @@ location: D:\path\to\project
 ### 示例 1：自动记录新项目
 
 ```
-用户: 帮我写一个 Flask 博客系统，放到 D:\blog
+用户: 帮我写一个 Flask 博客系统
 
 你的行动:
-1. 创建目录 D:\blog 的同时，读取 D:\claude-projects-manager\projects-data.json
+1. 创建目录 D:\Claude program\flask-blog 的同时，读取 D:\claude-projects-manager\projects-data.json
 2. 添加一条新记录：
    {
      "id": "proj-20260729-a3f2",
@@ -189,11 +201,11 @@ location: D:\path\to\project
      "createdAt": "2026-07-29",
      "updatedAt": "2026-07-29",
      "status": "in-progress",
-     "location": "D:\\blog",
+     "location": "D:\\Claude program\\flask-blog",
      "highlights": []
    }
 3. 更新 metadata.lastUpdated 和 totalProjects
-4. 写回文件
+4. 写回文件，并同步更新 web-ui/index.html 中的 embedded-data
 5. 继续正常开发（不打断用户，除非记录失败）
 ```
 

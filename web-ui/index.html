@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目检索面板 — Project Manager</title>
+<style>
+/* ========== CSS Variables ========== */
+:root {
+  --bg-primary: #0a0a12;
+  --bg-secondary: #111122;
+  --bg-card: #16162b;
+  --bg-card-hover: #1d1d38;
+  --border: #232348;
+  --text-primary: #e8e8f2;
+  --text-secondary: #9292b8;
+  --text-muted: #5c5c80;
+  --accent: #7258f5;
+  --accent-glow: rgba(114, 88, 245, 0.22);
+  --accent-2: #2ed8a3;
+  --accent-3: #f5a623;
+  --accent-4: #4da6ff;
+  --danger: #f5506e;
+  --status-completed: #2ed8a3;
+  --status-active: #4da6ff;
+  --status-archived: #5c5c80;
+  --radius: 12px;
+  --radius-sm: 7px;
+  --transition: 0.2s ease;
+}
+
+/* ========== Reset & Base ========== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:15px;scroll-behavior:smooth}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:var(--bg-primary);
+  color:var(--text-primary);
+  line-height:1.6;
+  min-height:100vh;
+}
+
+/* Subtle animated bg */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse at 20% 10%,rgba(114,88,245,0.08) 0%,transparent 60%),
+             radial-gradient(ellipse at 80% 80%,rgba(46,216,163,0.05) 0%,transparent 60%);
+  pointer-events:none;z-index:0;
+}
+
+/* ========== Layout ========== */
+.container{max-width:1240px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+
+/* ========== Error Banner ========== */
+.error-banner{
+  display:none;
+  background:rgba(245,80,110,0.12);
+  border:1px solid rgba(245,80,110,0.3);
+  border-radius:var(--radius);
+  padding:14px 20px;
+  margin-top:16px;
+  color:var(--danger);
+  font-size:0.88rem;
+  align-items:center;gap:10px;
+}
+.error-banner.show{display:flex;}
+.error-banner code{
+  background:rgba(0,0,0,0.3);padding:3px 8px;border-radius:4px;
+  font-size:0.82rem;color:var(--text-primary);
+}
+.error-banner .btn-sm{padding:4px 12px;margin-left:auto;white-space:nowrap;}
+
+/* ========== Header ========== */
+.header{
+  background:rgba(17,17,34,0.85);
+  border-bottom:1px solid var(--border);
+  padding:16px 0;
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+}
+.header-inner{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;
+}
+.logo{
+  display:flex;align-items:center;gap:10px;
+  font-size:1.2rem;font-weight:700;white-space:nowrap;
+}
+.logo-icon{
+  width:38px;height:38px;
+  background:linear-gradient(135deg,var(--accent),#a78bfa);
+  border-radius:var(--radius-sm);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.3rem;
+  box-shadow:0 0 20px var(--accent-glow);
+}
+.search-wrap{flex:1;max-width:500px;position:relative}
+.search-wrap input{
+  width:100%;padding:10px 16px 10px 42px;
+  border-radius:24px;
+  border:1px solid var(--border);
+  background:var(--bg-card);
+  color:var(--text-primary);
+  font-size:0.95rem;outline:none;
+  transition:var(--transition);
+}
+.search-wrap input:focus{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-glow);
+}
+.search-wrap input::placeholder{color:var(--text-muted)}
+.search-icon{
+  position:absolute;left:14px;top:50%;
+  transform:translateY(-50%);color:var(--text-muted);
+  pointer-events:none;font-size:1rem;
+}
+
+/* ========== Stats Bar ========== */
+.stats-bar{display:flex;gap:14px;padding:22px 0;flex-wrap:wrap}
+.stat-card{
+  flex:1;min-width:110px;
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:18px 22px;text-align:center;
+  transition:var(--transition);
+  cursor:default;
+}
+.stat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.stat-number{
+  font-size:2.2rem;font-weight:700;
+  background:linear-gradient(135deg,var(--accent),#a78bfa);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+.stat-label{font-size:0.78rem;color:var(--text-secondary);margin-top:2px;text-transform:uppercase;letter-spacing:0.5px}
+
+/* ========== Filters ========== */
+.filter-bar{
+  display:flex;gap:8px;padding:0 0 18px;flex-wrap:wrap;align-items:center;
+}
+.filter-label{
+  font-size:0.78rem;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:0.5px;margin-right:2px;
+}
+.chip{
+  padding:6px 16px;border-radius:20px;
+  border:1px solid var(--border);
+  background:var(--bg-card);color:var(--text-secondary);
+  font-size:0.84rem;cursor:pointer;transition:var(--transition);
+  white-space:nowrap;user-select:none;
+}
+.chip:hover{border-color:var(--accent);color:var(--text-primary)}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+.view-toggle{
+  display:flex;gap:3px;margin-left:auto;
+  background:var(--bg-card);border-radius:22px;
+  padding:3px;border:1px solid var(--border);
+}
+.view-btn{
+  padding:7px 16px;border-radius:20px;border:none;
+  background:transparent;color:var(--text-secondary);
+  cursor:pointer;font-size:0.84rem;transition:var(--transition);
+}
+.view-btn.active{background:var(--accent);color:#fff}
+
+/* ========== Project Grid ========== */
+.project-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(360px,1fr));
+  gap:16px;padding-bottom:40px;
+}
+.project-grid.hidden{display:none}
+.project-card{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:20px 22px;
+  transition:var(--transition);
+  display:flex;flex-direction:column;gap:12px;
+  cursor:pointer;
+}
+.project-card:hover{
+  border-color:var(--accent);
+  box-shadow:0 4px 28px var(--accent-glow);
+  transform:translateY(-3px);
+}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.card-title{font-size:1.08rem;font-weight:600;color:var(--text-primary)}
+.card-status{
+  font-size:0.68rem;padding:3px 10px;border-radius:12px;
+  font-weight:500;text-transform:uppercase;letter-spacing:0.5px;white-space:nowrap;
+}
+.status-completed{background:rgba(46,216,163,0.13);color:var(--status-completed)}
+.status-in-progress{background:rgba(77,166,255,0.13);color:var(--status-active)}
+.status-archived{background:rgba(92,92,128,0.13);color:var(--status-archived)}
+.card-desc{
+  font-size:0.86rem;color:var(--text-secondary);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+  overflow:hidden;line-height:1.5;
+}
+.card-tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{
+  padding:3px 10px;border-radius:12px;font-size:0.73rem;font-weight:500;
+  background:rgba(114,88,245,0.1);color:#b19ef7;
+}
+.tag.tech{background:rgba(77,166,255,0.1);color:#80c4ff}
+.card-actions{
+  display:flex;gap:8px;margin-top:auto;padding-top:10px;
+  border-top:1px solid var(--border);
+}
+.card-actions button{
+  flex:1;padding:7px 12px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:transparent;
+  color:var(--text-secondary);font-size:0.8rem;
+  cursor:pointer;transition:var(--transition);
+  display:flex;align-items:center;justify-content:center;gap:5px;
+  white-space:nowrap;
+}
+.card-actions button:hover{
+  border-color:var(--accent);color:var(--text-primary);
+  background:rgba(114,88,245,0.06);
+}
+.card-actions button.primary-action:hover{
+  border-color:var(--accent-2);color:var(--accent-2);
+  background:rgba(46,216,163,0.06);
+}
+.card-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:0.76rem;color:var(--text-muted);
+}
+.card-category{
+  padding:2px 8px;border-radius:4px;font-size:0.7rem;
+  background:var(--bg-secondary);text-transform:uppercase;letter-spacing:0.5px;
+}
+
+/* ========== Timeline ========== */
+.timeline-view{display:none;padding-bottom:40px}
+.timeline-view.active{display:block}
+.timeline-year{margin-bottom:28px}
+.timeline-year-header{
+  font-size:1.5rem;font-weight:700;color:var(--accent);
+  margin-bottom:14px;padding-bottom:8px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:baseline;gap:10px;
+}
+.timeline-year-count{font-size:0.85rem;color:var(--text-muted);font-weight:400}
+.timeline-items{position:relative;padding-left:32px}
+.timeline-items::before{
+  content:'';position:absolute;left:9px;top:4px;bottom:4px;
+  width:2px;background:var(--border);
+}
+.timeline-item{
+  position:relative;padding:14px 18px;margin-bottom:8px;
+  background:var(--bg-card);border:1px solid var(--border);
+  border-radius:var(--radius);transition:var(--transition);
+  cursor:pointer;
+}
+.timeline-item:hover{
+  border-color:var(--accent);
+  box-shadow:0 2px 16px var(--accent-glow);
+}
+.timeline-item::before{
+  content:'';position:absolute;left:-27px;top:20px;
+  width:12px;height:12px;border-radius:50%;
+  background:var(--accent);border:2px solid var(--bg-primary);
+}
+.timeline-date{font-size:0.78rem;color:var(--accent);font-weight:500;margin-bottom:4px}
+.timeline-item .card-title{font-size:1rem}
+.timeline-item .card-desc{-webkit-line-clamp:1}
+.timeline-actions{display:flex;gap:8px;margin-top:10px}
+.timeline-actions button{
+  padding:5px 12px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:transparent;
+  color:var(--text-secondary);font-size:0.76rem;
+  cursor:pointer;transition:var(--transition);
+  display:flex;align-items:center;gap:4px;
+}
+.timeline-actions button:hover{
+  border-color:var(--accent);color:var(--text-primary);
+}
+
+/* ========== Modal ========== */
+.modal-overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,0.65);z-index:200;
+  align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.modal-overlay.show{display:flex}
+.modal{
+  background:var(--bg-secondary);border:1px solid var(--border);
+  border-radius:var(--radius);padding:30px;
+  max-width:620px;width:90%;max-height:85vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,0.5);
+}
+.modal h2{font-size:1.4rem;margin-bottom:4px}
+.modal .modal-desc{color:var(--text-secondary);margin-bottom:20px;font-size:0.92rem}
+.modal-section{margin-bottom:16px}
+.modal-section h3{
+  font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;
+  color:var(--text-muted);margin-bottom:8px;
+}
+.modal-tags{display:flex;gap:6px;flex-wrap:wrap}
+.modal-actions{display:flex;gap:10px;margin-top:24px;flex-wrap:wrap}
+.modal-actions button, .modal-actions a{
+  padding:9px 20px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg-card);
+  color:var(--text-primary);font-size:0.88rem;
+  cursor:pointer;transition:var(--transition);
+  text-decoration:none;display:flex;align-items:center;gap:6px;
+}
+.modal-actions .btn-primary{
+  background:var(--accent);border-color:var(--accent);color:#fff;
+}
+.modal-actions .btn-primary:hover{box-shadow:0 0 16px var(--accent-glow)}
+.modal-close{
+  position:absolute;top:14px;right:18px;
+  background:none;border:none;color:var(--text-muted);
+  font-size:1.5rem;cursor:pointer;padding:4px 8px;
+}
+.modal-close:hover{color:var(--text-primary)}
+
+/* ========== Toast ========== */
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--accent-2);color:#000;padding:10px 22px;
+  border-radius:24px;font-size:0.85rem;font-weight:500;
+  opacity:0;transition:opacity 0.3s;z-index:300;
+  pointer-events:none;
+}
+.toast.show{opacity:1}
+
+/* ========== Empty ========== */
+.empty-state{
+  text-align:center;padding:80px 20px;color:var(--text-muted);
+}
+.empty-icon{font-size:5rem;margin-bottom:16px;opacity:0.3}
+.empty-title{font-size:1.3rem;color:var(--text-secondary);margin-bottom:8px}
+.empty-desc{font-size:0.9rem}
+
+/* ========== Responsive ========== */
+@media (max-width:768px){
+  .header-inner{flex-direction:column;align-items:stretch}
+  .search-wrap{max-width:100%}
+  .project-grid{grid-template-columns:1fr;gap:12px}
+  .stats-bar{gap:8px}
+  .stat-card{padding:12px 14px}
+  .stat-number{font-size:1.6rem}
+  .view-toggle{margin-left:0}
+  .modal{padding:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- ========== Header ========== -->
+<header class="header">
+  <div class="container header-inner">
+    <div class="logo">
+      <div class="logo-icon">📂</div>
+      <span>项目检索面板</span>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="搜索项目名称、描述、技术栈…" autocomplete="off">
+    </div>
+  </div>
+</header>
+
+<main class="container">
+  <!-- Error Banner -->
+  <div class="error-banner" id="errorBanner">
+    <span>⚠️</span>
+    <span>数据加载失败。请使用本地服务器打开：</span>
+    <code>python -m http.server 8765</code>
+    <span>然后访问</span>
+    <code>http://localhost:8765/web-ui/</code>
+    <button class="btn-sm chip" onclick="retryLoad()" style="color:var(--danger);border-color:var(--danger);cursor:pointer;">重试</button>
+  </div>
+
+  <!-- Stale Data Banner (file:// mode) -->
+  <div id="staleBanner" style="display:none;background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.25);border-radius:var(--radius);padding:10px 18px;margin-top:12px;font-size:0.82rem;color:var(--accent-3);text-align:center;">
+    💡 当前为离线快照数据。双击 <code style="background:rgba(0,0,0,0.3);padding:2px 8px;border-radius:4px;">launch.bat</code> 启动本地服务器获取实时数据。
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <span class="filter-label">分类</span>
+    <span class="chip active" data-filter="all">全部</span>
+    <span class="chip" data-filter="fullstack">全栈</span>
+    <span class="chip" data-filter="frontend">前端</span>
+    <span class="chip" data-filter="backend">后端</span>
+    <span class="chip" data-filter="tool">工具</span>
+    <span class="chip" data-filter="cli">CLI</span>
+    <span class="chip" data-filter="other">其他</span>
+    <div class="view-toggle">
+      <button class="view-btn active" data-view="grid">📋 卡片</button>
+      <button class="view-btn" data-view="timeline">📅 时间线</button>
+    </div>
+  </div>
+
+  <!-- Grid -->
+  <div class="project-grid" id="projectGrid"></div>
+  <!-- Timeline -->
+  <div class="timeline-view" id="timelineView"></div>
+</main>
+
+<!-- ========== Detail Modal ========== -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<!-- ========== Toast ========== -->
+<div class="toast" id="toast"></div>
+
+<!-- ========== Embedded Data Fallback (for file:// access) ========== -->
+<script id="embedded-data" type="application/json">
+{"projects":[{"id":"proj-20260729-b7e2","name":"项目检索管理系统","description":"Claude Code 项目管家，自动追踪记录所有合作项目，支持关键词搜索、时间线浏览、Web 可视化面板和 Obsidian 备份同步","techStack":["HTML","CSS","JavaScript","JSON","Claude Code Skill","Obsidian"],"tags":["tool","project-management","search","automation"],"category":"tool","createdAt":"2026-07-29","updatedAt":"2026-07-29","status":"completed","location":"D:\\\\claude-projects-manager","highlights":["自动检测并实时记录新项目，用户零操作","关键词全文搜索 + 年份时间线双模式检索","精美暗色主题 Web 界面，支持卡片/时间线视图切换","项目完成自动生成 Obsidian YAML frontmatter 备份","无缝集成 Claude Code Skill，自然语言触发"]}],"metadata":{"lastUpdated":"2026-07-29T12:00:00+08:00","totalProjects":1}}
+</script>
+
+<script>
+// ========== State ==========
+const API_BASE = window.location.origin;
+const DATA_URL = API_BASE + '/api/projects';
+let projects = [];
+let metadata = {};
+let activeFilter = 'all';
+let activeView = 'grid';
+
+// ========== Data Load ==========
+async function loadData() {
+  let fromNetwork = false;
+  try {
+    const resp = await fetch(DATA_URL);
+    if (resp.ok) {
+      const data = await resp.json();
+      projects = data.projects || [];
+      metadata = data.metadata || {};
+      fromNetwork = true;
+      document.getElementById('errorBanner').classList.remove('show');
+    }
+  } catch (err) {
+    console.warn('API fetch failed:', err.message);
+  }
+
+  // Fallback to embedded data (for file:// access)
+  if (!fromNetwork) {
+    try {
+      const el = document.getElementById('embedded-data');
+      if (el && el.textContent.trim()) {
+        const data = JSON.parse(el.textContent.trim());
+        projects = data.projects || [];
+        metadata = data.metadata || {};
+        const banner = document.getElementById('staleBanner');
+        if (banner) banner.style.display = 'block';
+      }
+    } catch (e) {
+      console.warn('Embedded data parse failed:', e.message);
+      document.getElementById('errorBanner').classList.add('show');
+    }
+  }
+}
+
+window.retryLoad = async function() {
+  await loadData();
+  renderAll();
+};
+
+// ========== Render ==========
+function renderStats() {
+  const total = projects.length;
+  const cats = {};
+  const statuses = { completed: 0, 'in-progress': 0, archived: 0 };
+  projects.forEach(p => {
+    cats[p.category] = (cats[p.category] || 0) + 1;
+    if (statuses[p.status] !== undefined) statuses[p.status]++;
+  });
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-card"><div class="stat-number">${total}</div><div class="stat-label">项目总数</div></div>
+    <div class="stat-card"><div class="stat-number">${statuses['completed']}</div><div class="stat-label">已完成</div></div>
+    <div class="stat-card"><div class="stat-number">${statuses['in-progress']}</div><div class="stat-label">进行中</div></div>
+    <div class="stat-card"><div class="stat-number">${Object.keys(cats).length}</div><div class="stat-label">分类数</div></div>
+  `;
+}
+
+function getFiltered() {
+  const query = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+  let filtered = [...projects];
+  if (activeFilter !== 'all') filtered = filtered.filter(p => p.category === activeFilter);
+  if (query) {
+    filtered = filtered.filter(p =>
+      (p.name||'').toLowerCase().includes(query) ||
+      (p.description||'').toLowerCase().includes(query) ||
+      (p.techStack||[]).some(t => t.toLowerCase().includes(query)) ||
+      (p.tags||[]).some(t => t.toLowerCase().includes(query))
+    );
+  }
+  filtered.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return filtered;
+}
+
+// ========== Action Handlers ==========
+async function openProjectDir(location) {
+  if (!location) { showToast('该项目未记录目录路径'); return; }
+  // Try API first (HTTP server mode)
+  try {
+    const resp = await fetch(API_BASE + '/api/open?path=' + encodeURIComponent(location));
+    if (resp.ok) { return; } // Server opened the folder
+  } catch(e) { /* fall through */ }
+  // Fallback: file:// protocol (file:// mode or API failed)
+  const url = 'file:///' + location.replace(/\\/g, '/');
+  const w = window.open(url, '_blank');
+  if (!w) { copyToClipboard(location); showToast('路径已复制: ' + location); }
+}
+
+async function continueProject(name, location) {
+  try {
+    const params = new URLSearchParams({ name, path: location || '' });
+    const resp = await fetch(API_BASE + '/api/continue?' + params.toString());
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data.launched) {
+        showToast('Claude Code 启动中，自动继续: ' + name);
+        return;
+      }
+    }
+  } catch(e) { /* fall through */ }
+  // Fallback
+  if (location) {
+    window.open('file:///' + location.replace(/\\/g, '/'), '_blank');
+  }
+  showToast('已打开项目: ' + name);
+}
+
+function copyToClipboard(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).catch(() => {});
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ========== Modal ==========
+function showDetail(project) {
+  const overlay = document.getElementById('modalOverlay');
+  document.getElementById('modalContent').innerHTML = `
+    <div style="display:flex;align-items:start;justify-content:space-between;">
+      <div>
+        <h2>${esc(project.name)}</h2>
+        <span class="card-status status-${project.status}" style="display:inline-block;margin-bottom:4px;">${statusLabel(project.status)}</span>
+      </div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <p class="modal-desc">${esc(project.description || '暂无描述')}</p>
+    ${project.highlights && project.highlights.length > 0 ? `
+    <div class="modal-section">
+      <h3>✨ 亮点</h3>
+      <ul style="padding-left:18px;color:var(--text-secondary);font-size:0.88rem;line-height:2;">
+        ${project.highlights.map(h => `<li>${esc(h)}</li>`).join('')}
+      </ul>
+    </div>` : ''}
+    <div class="modal-section">
+      <h3>🛠 技术栈</h3>
+      <div class="modal-tags">${(project.techStack||[]).map(t => `<span class="tag tech">${esc(t)}</span>`).join('') || '<span style="color:var(--text-muted)">—</span>'}</div>
+    </div>
+    <div class="modal-section">
+      <h3>🏷 标签</h3>
+      <div class="modal-tags">${(project.tags||[]).map(t => `<span class="tag">${esc(t)}</span>`).join('') || '<span style="color:var(--text-muted)">—</span>'}</div>
+    </div>
+    <div class="modal-section" style="display:flex;gap:24px;flex-wrap:wrap;font-size:0.84rem;color:var(--text-secondary);">
+      <span>📁 分类: <strong style="color:var(--text-primary);">${esc(project.category||'other')}</strong></span>
+      <span>📅 创建: <strong style="color:var(--text-primary);">${formatDate(project.createdAt)}</strong></span>
+      <span>🔄 更新: <strong style="color:var(--text-primary);">${formatDate(project.updatedAt)}</strong></span>
+      ${project.location ? `<span>📂 路径: <code style="color:var(--accent);font-size:0.78rem;">${esc(project.location)}</code></span>` : ''}
+    </div>
+    <div class="modal-actions">
+      ${project.location ? `<a href="javascript:void(0)" onclick="openProjectDir('${escAttr(project.location)}')" class="btn-primary">📂 打开项目目录</a>` : ''}
+      <button class="btn-primary" style="background:var(--accent-2);border-color:var(--accent-2);" onclick="continueProject('${escAttr(project.name)}','${escAttr(project.location||'')}');closeModal();">🤖 一键继续开发</button>
+      <button onclick="closeModal()">关闭</button>
+    </div>
+  `;
+  overlay.classList.add('show');
+  overlay.onclick = function(e) { if (e.target === overlay) closeModal(); };
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('show');
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ========== Grid Render ==========
+function renderGrid() {
+  const filtered = getFiltered();
+  const grid = document.getElementById('projectGrid');
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">没有找到项目</div>
+      <div class="empty-desc">试试修改搜索词或切换分类吧</div>
+    </div>`;
+    return;
+  }
+  grid.innerHTML = filtered.map(p => `
+    <div class="project-card" onclick="showDetail(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+      <div class="card-header">
+        <span class="card-title">${esc(p.name)}</span>
+        <span class="card-status status-${p.status}">${statusLabel(p.status)}</span>
+      </div>
+      <div class="card-desc">${esc(p.description || '暂无描述')}</div>
+      <div class="card-tags">
+        ${(p.techStack||[]).slice(0,4).map(t => `<span class="tag tech">${esc(t)}</span>`).join('')}
+        ${(p.tags||[]).slice(0,3).map(t => `<span class="tag">${esc(t)}</span>`).join('')}
+      </div>
+      <div class="card-actions">
+        ${p.location ? `<button onclick="event.stopPropagation();openProjectDir('${escAttr(p.location)}')" title="在资源管理器中打开">📂 打开目录</button>` : ''}
+        <button class="primary-action" onclick="event.stopPropagation();continueProject('${escAttr(p.name)}','${escAttr(p.location||'')}')" title="打开目录 + 复制 Claude Code 指令">🤖 继续开发</button>
+      </div>
+      <div class="card-footer">
+        <span class="card-category">${esc(p.category||'other')}</span>
+        <span>${formatDate(p.createdAt)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ========== Timeline Render ==========
+function renderTimeline() {
+  const filtered = getFiltered();
+  const view = document.getElementById('timelineView');
+  if (filtered.length === 0) {
+    view.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">📭</div>
+      <div class="empty-title">没有找到项目</div>
+      <div class="empty-desc">试试修改搜索词或切换分类吧</div>
+    </div>`;
+    return;
+  }
+  const byYear = {};
+  filtered.forEach(p => {
+    const y = new Date(p.createdAt).getFullYear();
+    if (!byYear[y]) byYear[y] = [];
+    byYear[y].push(p);
+  });
+  const years = Object.keys(byYear).sort((a,b) => b - a);
+  view.innerHTML = years.map(y => `
+    <div class="timeline-year">
+      <div class="timeline-year-header">${y}年 <span class="timeline-year-count">${byYear[y].length} 个项目</span></div>
+      <div class="timeline-items">
+        ${byYear[y].map(p => `
+          <div class="timeline-item" onclick="showDetail(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+            <div class="timeline-date">${formatDate(p.createdAt)}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <span class="card-title">${esc(p.name)}</span>
+              <span class="card-status status-${p.status}">${statusLabel(p.status)}</span>
+            </div>
+            <div class="card-desc">${esc(p.description || '暂无描述')}</div>
+            <div class="timeline-actions">
+              ${p.location ? `<button onclick="event.stopPropagation();openProjectDir('${escAttr(p.location)}')">📂 打开目录</button>` : ''}
+              <button onclick="event.stopPropagation();continueProject('${escAttr(p.name)}','${escAttr(p.location||'')}')">🤖 继续开发</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderAll() { renderStats(); renderGrid(); renderTimeline(); }
+
+function switchView(v) {
+  activeView = v;
+  document.querySelectorAll('.view-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector(`[data-view="${v}"]`).classList.add('active');
+  document.getElementById('projectGrid').classList.toggle('hidden', v !== 'grid');
+  document.getElementById('timelineView').classList.toggle('active', v === 'timeline');
+}
+
+// ========== Helpers ==========
+function esc(s) { if(!s) return ''; const d=document.createElement('div');d.textContent=s;return d.innerHTML; }
+function escAttr(s) { return (s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
+function formatDate(d) { if(!d) return '—'; const dt=new Date(d); return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`; }
+function statusLabel(s) { const m={'completed':'已完成','in-progress':'进行中','archived':'已归档'}; return m[s]||s; }
+
+// ========== Events ==========
+document.getElementById('searchInput').addEventListener('input', renderAll);
+document.querySelectorAll('.chip').forEach(c => c.addEventListener('click', function() {
+  document.querySelectorAll('.chip').forEach(x => x.classList.remove('active'));
+  this.classList.add('active');
+  activeFilter = this.dataset.filter;
+  renderAll();
+}));
+document.querySelectorAll('.view-btn').forEach(b => b.addEventListener('click', function() {
+  switchView(this.dataset.view);
+}));
+
+// ========== Init ==========
+loadData().then(renderAll);
+</script>
+</body>
+</html>

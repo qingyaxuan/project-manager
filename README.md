@@ -20,7 +20,7 @@
 
 ### 方式一：EXE（推荐）
 
-1. 从 [Releases](../../releases) 下载 `ProjectManager.exe`
+1. 从 [Releases](https://github.com/qingyaxuan/project-manager/releases) 下载 `ProjectManager.exe`
 2. 双击运行 → 浏览器自动打开 `http://localhost:8765/web-ui/`
 3. 数据自动保存在 EXE 同目录下的 `projects-data.json`
 
